@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Server Metrics Dashboard</title>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f7f9fc;
+                color: #222;
+            }
+            header {
+                background-color: #2c3e50;
+                color: #ecf0f1;
+                padding: 1rem 2rem;
+                font-size: 1.5rem;
+                font-weight: bold;
+                text-align: center;
+            }
+            main {
+                max-width: 900px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .section {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 3px 7px rgb(0 0 0 / 0.1);
+                margin-bottom: 1.5rem;
+                padding: 1.5rem;
+            }
+            h2 {
+                margin-top: 0;
+                margin-bottom: 1rem;
+                color: #34495e;
+            }
+            .metrics {
+                display: flex;
+                justify-content: space-around;
+            }
+            .metric-card {
+                flex: 1;
+                margin: 0 1rem;
+                padding: 1rem;
+                border-radius: 6px;
+                background: #3498db;
+                color: white;
+                text-align: center;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            .metric-card.failed {
+                background: #e74c3c;
+            }
+            pre {
+                background: #ecf0f1;
+                padding: 0.8rem;
+                border-radius: 6px;
+                max-height: 300px;
+                overflow-y: auto;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }
+            #logs {
+                max-height: 400px;
+                overflow-y: auto;
+                background: #1e272e;
+                color: #d2dae2;
+                border-radius: 6px;
+                padding: 1rem;
+                white-space: pre-wrap;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }
+            footer {
+                text-align: center;
+                font-size: 0.8rem;
+                color: #999;
+                padding: 1rem 0;
+            }
+        </style>
+    </head>
+    <body>
+        <header>Server Metrics Dashboard</header>
+        <main>
+            <section class="section">
+                <h2>Summary</h2>
+                <div class="metrics">
+                    <div class="metric-card success">
+                        <div id="successCount">0</div>
+                        <div>Success Requests</div>
+                    </div>
+                    <div class="metric-card failed">
+                        <div id="failedCount">0</div>
+                        <div>Failed Requests</div>
+                    </div>
+                    <div class="metric-card logs">
+                        <div id="logCount">0</div>
+                        <div>Log Entries</div>
+                    </div>
+                </div>
+            </section>
+            <section class="section">
+                <h2>Recent Logs</h2>
+                <div id="logs">(Loading logs...)</div>
+                <button id="btnReload" style="display:none; margin-top: 0.5rem;">Reload Logs</button>
+            </section>
+        </main>
+        <footer>
+            &copy; 2025 Verification Metrics Server Dashboard
+        </footer>
+
+        <script>
+            let lastLogCount = 0;  // Biến đếm số dòng log đã hiển thị
+
+            async function fetchMetrics() {
+                try {
+                    const res = await fetch('/metrics');
+                    if (!res.ok)
+                        throw new Error('Failed to fetch metrics');
+                    const data = await res.json();
+                    document.getElementById('successCount').textContent = data.success;
+                    document.getElementById('failedCount').textContent = data.failed;
+                    document.getElementById('logCount').textContent = data.logSize;
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async function fetchLogs() {
+                try {
+                    const res = await fetch('/log');
+                    if (!res.ok)
+                        throw new Error('Failed to fetch logs');
+                    const logs = await res.json();
+                    const logsEl = document.getElementById('logs');
+                    const btnReload = document.getElementById('btnReload');
+
+                    if (logs.length === 0) {
+                        logsEl.textContent = '(No logs yet)';
+                        lastLogCount = 0;
+                        btnReload.style.display = 'none';
+                        return;
+                    }
+
+                    // Nếu lần đầu chạy hoặc chưa có log
+                    if (lastLogCount === 0) {
+                        logsEl.textContent = logs.join('\n');
+                        lastLogCount = logs.length;
+                        scrollToBottom(logsEl);
+                        btnReload.style.display = 'none';
+                        return;
+                    }
+
+                    // Nếu có log mới
+                    if (logs.length > lastLogCount) {
+                        const newLogs = logs.slice(lastLogCount);
+                        const isAtBottom = isScrollAtBottom(logsEl);
+
+                        // Append log mới, giữ log cũ
+                        logsEl.textContent += '\n' + newLogs.join('\n');
+                        lastLogCount = logs.length;
+
+                        if (isAtBottom) {
+                            scrollToBottom(logsEl);
+                            btnReload.style.display = 'none';
+                        } else {
+                            // Nếu không ở cuối, hiện nút reload
+                            btnReload.style.display = 'inline-block';
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function isScrollAtBottom(el) {
+                return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) <= 5;
+            }
+
+            function scrollToBottom(el) {
+                el.scrollTop = el.scrollHeight;
+            }
+
+            // Reload log button
+            document.getElementById('btnReload').addEventListener('click', () => {
+                const logsEl = document.getElementById('logs');
+                scrollToBottom(logsEl);
+                document.getElementById('btnReload').style.display = 'none';
+            });
+
+            async function refresh() {
+                await fetchMetrics();
+                await fetchLogs();
+            }
+
+            refresh();
+            setInterval(refresh, 3000); // Khởi động lần đầu và chạy polling mỗi 3 giây
+        </script>
+
+    </body>
+</html>

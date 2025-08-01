@@ -1,0 +1,10 @@
+com\mycompany\server\VerifyServerNetty.class
+com\mycompany\server\CircularBuffer.class
+com\mycompany\server\KeyDatabase.class
+com\mycompany\server\LogBroadcaster.class
+com\mycompany\server\MetricsCollector.class
+com\mycompany\server\VerifyServerNetty$VerifyServerHandler.class
+com\mycompany\server\SubdomainScan$ScanStats.class
+com\mycompany\server\SubdomainScan.class
+com\mycompany\server\VerifyServerNetty$1.class
+com\mycompany\server\MetricsHttpServer.class

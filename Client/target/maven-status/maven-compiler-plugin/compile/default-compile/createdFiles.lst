@@ -1,0 +1,4 @@
+com\mycompany\client\ClientUI.class
+com\mycompany\client\VerifyClientHandler.class
+com\mycompany\client\NettyClientLauncher.class
+com\mycompany\client\NettyClientLauncher$1.class
